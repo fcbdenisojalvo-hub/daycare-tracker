@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Daycare Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FDF8F2; --warm: #F5EDE0; --peach: #F2A97A; --peach-dark: #E8894F;
+    --brown: #3D2B1F; --brown-mid: #7A5C4A; --brown-light: #B89882;
+    --green-light: #A8CCA9; --red: #D96B5A; --white: #FFFFFF;
+    --shadow: 0 4px 24px rgba(61,43,31,0.10); --shadow-sm: 0 2px 8px rgba(61,43,31,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--brown); min-height: 100vh; max-width: 480px; margin: 0 auto; }
+
+  .header { background: var(--brown); padding: 20px 24px 16px; position: sticky; top: 0; z-index: 100; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .header h1 { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--cream); }
+  .header h1 span { color: var(--peach); }
+  .sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--brown-light); }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green-light); }
+  .sync-dot.syncing { animation: pulse 1s infinite; background: var(--peach); }
+  .sync-dot.error { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+  .month-nav button { background: rgba(255,255,255,0.1); border: none; color: var(--cream); width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
+  .month-nav button:hover { background: rgba(255,255,255,0.2); }
+  .month-label { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--cream); }
+
+  .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 20px 20px 8px; }
+  .card { background: var(--white); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-sm); }
+  .card-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--brown-light); margin-bottom: 6px; }
+  .card-value { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--brown); line-height: 1; }
+  .card-value.money { color: var(--peach-dark); }
+  .card-sub { font-size: 11px; color: var(--brown-light); margin-top: 4px; }
+
+  .calendar-wrap { padding: 8px 20px 20px; }
+  .calendar-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--brown-light); margin-bottom: 12px; }
+  .calendar { background: var(--white); border-radius: 20px; padding: 16px; box-shadow: var(--shadow-sm); }
+  .cal-days-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; margin-bottom: 8px; }
+  .cal-days-header span { font-size: 11px; font-weight: 600; color: var(--brown-light); text-transform: uppercase; letter-spacing: 0.05em; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; color: var(--brown); user-select: none; -webkit-tap-highlight-color: transparent; }
+  .cal-cell:hover:not(.empty):not(.future) { background: var(--warm); }
+  .cal-cell.attended { background: var(--peach); color: var(--white); font-weight: 600; }
+  .cal-cell.attended:hover { background: var(--peach-dark); }
+  .cal-cell.today { border: 2px solid var(--peach); }
+  .cal-cell.today.attended { border-color: transparent; }
+  .cal-cell.empty { cursor: default; }
+  .cal-cell.future { color: var(--brown-light); cursor: default; opacity: 0.4; }
+
+  .fab-area { padding: 0 20px 32px; }
+  .fab { width: 100%; background: var(--brown); color: var(--cream); border: none; border-radius: 16px; padding: 16px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.2s; box-shadow: var(--shadow); }
+  .fab:hover { background: var(--peach-dark); transform: translateY(-1px); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(61,43,31,0.5); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal { background: var(--white); border-radius: 24px 24px 0 0; padding: 24px 24px 40px; width: 100%; max-width: 480px; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-handle { width: 40px; height: 4px; background: var(--warm); border-radius: 2px; margin: 0 auto 20px; }
+  .modal h2 { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 6px; }
+  .modal-sub { font-size: 13px; color: var(--brown-light); margin-bottom: 20px; }
+  .date-input-row { display: flex; gap: 10px; margin-bottom: 16px; }
+  .date-input-row input { flex: 1; padding: 12px 14px; border: 1.5px solid var(--warm); border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--brown); background: var(--cream); outline: none; transition: border 0.2s; }
+  .date-input-row input:focus { border-color: var(--peach); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
+  .btn { flex: 1; padding: 14px; border-radius: 12px; border: none; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-primary { background: var(--peach); color: var(--white); }
+  .btn-primary:hover { background: var(--peach-dark); }
+  .btn-secondary { background: var(--warm); color: var(--brown); }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--brown); color: var(--cream); padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 300; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); white-space: nowrap; box-shadow: var(--shadow); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .history-section { padding: 0 20px 40px; }
+  .history-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--brown-light); margin-bottom: 12px; }
+  .history-list { display: flex; flex-direction: column; gap: 8px; }
+  .history-item { background: var(--white); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm); }
+  .history-month { font-weight: 600; font-size: 14px; }
+  .history-details { font-size: 12px; color: var(--brown-light); margin-top: 2px; }
+  .history-amount { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--peach-dark); }
+  .empty-state { text-align: center; padding: 32px 0; color: var(--brown-light); font-size: 14px; }
+  .empty-icon { font-size: 36px; margin-bottom: 8px; }
+
+  .loading-overlay { position: fixed; inset: 0; background: var(--cream); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 500; transition: opacity 0.4s; }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loading-logo { font-family: 'DM Serif Display', serif; font-size: 32px; color: var(--brown); margin-bottom: 8px; }
+  .loading-logo span { color: var(--peach); }
+  .loading-spinner { width: 32px; height: 32px; border: 3px solid var(--warm); border-top-color: var(--peach); border-radius: 50%; animation: spin 0.8s linear infinite; margin-top: 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-logo">Little <span>Daycare</span> 🧸</div>
+  <div style="font-size:13px;color:var(--brown-light);margin-top:4px;">Connecting…</div>
+  <div class="loading-spinner"></div>
+</div>
+
+<div class="header">
+  <div class="header-top">
+    <h1>Little <span>Daycare</span> 🧸</h1>
+    <div class="sync-indicator">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncStatus">Connecting…</span>
+    </div>
+  </div>
+  <div class="month-nav">
+    <button onclick="changeMonth(-1)">&#8592;</button>
+    <span class="month-label" id="monthLabel"></span>
+    <button onclick="changeMonth(1)">&#8594;</button>
+  </div>
+</div>
+
+<div class="summary">
+  <div class="card">
+    <div class="card-label">Days This Month</div>
+    <div class="card-value" id="daysCount">0</div>
+    <div class="card-sub">days attended</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Monthly Cost</div>
+    <div class="card-value money" id="monthlyCost">$0</div>
+    <div class="card-sub">@ $30/day</div>
+  </div>
+</div>
+
+<div class="calendar-wrap">
+  <div class="calendar-title">Attendance Calendar</div>
+  <div class="calendar">
+    <div class="cal-days-header">
+      <span>Su</span><span>Mo</span><span>Tu</span><span>We</span>
+      <span>Th</span><span>Fr</span><span>Sa</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+</div>
+
+<div class="fab-area">
+  <button class="fab" onclick="openModal()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/>
+      <line x1="8" y1="12" x2="16" y2="12"/>
+    </svg>
+    Log a Day
+  </button>
+</div>
+
+<div class="history-section">
+  <div class="history-title">Monthly Summary</div>
+  <div class="history-list" id="historyList"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Log Daycare Day</h2>
+    <p class="modal-sub">Tap a day on the calendar, or pick a date below.</p>
+    <div class="date-input-row">
+      <input type="date" id="dateInput" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="logDayFromModal()">Log Day</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAKGGLhYSWwqH29cioJaCM8mFqkCDM_krg",
+    authDomain: "daycare-tracker-6b147.firebaseapp.com",
+    projectId: "daycare-tracker-6b147",
+    storageBucket: "daycare-tracker-6b147.firebasestorage.app",
+    messagingSenderId: "280129528572",
+    appId: "1:280129528572:web:59a837e7fe3bcb48572d79"
+  };
+
+  const fireApp = initializeApp(firebaseConfig);
+  const db = getFirestore(fireApp);
+  const docRef = doc(db, "tracker", "attendance");
+
+  const RATE = 30;
+  let viewYear, viewMonth;
+  let attendedDays = {};
+  let isSaving = false;
+  let initialized = false;
+
+  function setSyncStatus(status) {
+    const dot = document.getElementById('syncDot');
+    const label = document.getElementById('syncStatus');
+    dot.className = 'sync-dot';
+    if (status === 'syncing') { dot.classList.add('syncing'); label.textContent = 'Saving…'; }
+    else if (status === 'error') { dot.classList.add('error'); label.textContent = 'Error'; }
+    else { label.textContent = 'Synced'; }
+  }
+
+  async function saveData() {
+    isSaving = true;
+    setSyncStatus('syncing');
+    try {
+      await setDoc(docRef, { days: attendedDays });
+      setSyncStatus('synced');
+    } catch(e) {
+      setSyncStatus('error');
+      showToast('⚠️ Failed to save. Check connection.');
+    }
+    isSaving = false;
+  }
+
+  function init() {
+    const now = new Date();
+    viewYear = now.getFullYear();
+    viewMonth = now.getMonth();
+
+    onSnapshot(docRef, (snap) => {
+      const remote = snap.exists() ? (snap.data().days || {}) : {};
+      const changed = JSON.stringify(remote) !== JSON.stringify(attendedDays);
+      attendedDays = remote;
+
+      if (!initialized) {
+        initialized = true;
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        setSyncStatus('synced');
+      } else if (!isSaving && changed) {
+        showToast('📡 Synced with partner');
+      }
+      render();
+    }, () => {
+      setSyncStatus('error');
+      document.getElementById('loadingOverlay').classList.add('hidden');
+      showToast('⚠️ Could not connect to database');
+    });
+  }
+
+  function render() {
+    renderHeader();
+    renderCalendar();
+    renderSummary();
+    renderHistory();
+  }
+
+  function renderHeader() {
+    const d = new Date(viewYear, viewMonth, 1);
+    document.getElementById('monthLabel').textContent =
+      d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+
+  function getMonthKey(y, m) { return `${y}_${String(m+1).padStart(2,'0')}`; }
+  function getDaysForMonth(y, m) { return attendedDays[getMonthKey(y, m)] || []; }
+
+  function renderSummary() {
+    const days = getDaysForMonth(viewYear, viewMonth);
+    document.getElementById('daysCount').textContent = days.length;
+    document.getElementById('monthlyCost').textContent = `$${days.length * RATE}`;
+  }
+
+  function renderCalendar() {
+    const grid = document.getElementById('calGrid');
+    grid.innerHTML = '';
+    const today = new Date();
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const attended = getDaysForMonth(viewYear, viewMonth);
+
+    for (let i = 0; i < firstDay; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell empty';
+      grid.appendChild(cell);
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell';
+      cell.textContent = d;
+      const isToday = today.getDate()===d && today.getMonth()===viewMonth && today.getFullYear()===viewYear;
+      const isFuture = new Date(viewYear, viewMonth, d) > today;
+      if (isToday) cell.classList.add('today');
+      if (isFuture) cell.classList.add('future');
+      if (attended.includes(d)) cell.classList.add('attended');
+      if (!isFuture) cell.onclick = () => toggleDay(d);
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    const months = Object.keys(attendedDays).sort().reverse();
+    if (months.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div>No history yet. Start logging days!</div>`;
+      return;
+    }
+    list.innerHTML = '';
+    months.forEach(key => {
+      const days = attendedDays[key];
+      if (!days || days.length === 0) return;
+      const [y, m] = key.split('_');
+      const label = new Date(+y, +m-1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      list.innerHTML += `
+        <div class="history-item">
+          <div>
+            <div class="history-month">${label}</div>
+            <div class="history-details">${days.length} day${days.length!==1?'s':''} attended</div>
+          </div>
+          <div class="history-amount">$${days.length * RATE}</div>
+        </div>`;
+    });
+  }
+
+  function toggleDay(day) {
+    const key = getMonthKey(viewYear, viewMonth);
+    if (!attendedDays[key]) attendedDays[key] = [];
+    const idx = attendedDays[key].indexOf(day);
+    if (idx > -1) {
+      attendedDays[key].splice(idx, 1);
+      showToast(`Removed day ${day}`);
+    } else {
+      attendedDays[key].push(day);
+      attendedDays[key].sort((a,b) => a-b);
+      showToast(`🎒 Day ${day} logged! $${RATE} added`);
+    }
+    render();
+    saveData();
+  }
+
+  function changeMonth(dir) {
+    viewMonth += dir;
+    if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+    render();
+  }
+
+  function openModal() {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth()+1).padStart(2,'0');
+    const d = String(today.getDate()).padStart(2,'0');
+    document.getElementById('dateInput').value = `${y}-${m}-${d}`;
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById('modalOverlay')) closeModal();
+  }
+
+  function logDayFromModal() {
+    const val = document.getElementById('dateInput').value;
+    if (!val) { showToast('Please pick a date'); return; }
+    const [y, m, d] = val.split('-').map(Number);
+    const key = getMonthKey(y, m-1);
+    if (!attendedDays[key]) attendedDays[key] = [];
+    if (attendedDays[key].includes(d)) { showToast('⚠️ Day already logged'); closeModal(); return; }
+    attendedDays[key].push(d);
+    attendedDays[key].sort((a,b) => a-b);
+    viewYear = y; viewMonth = m-1;
+    render();
+    saveData();
+    closeModal();
+    showToast(`🎒 Logged! $${RATE} added`);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  window.changeMonth = changeMonth;
+  window.openModal = openModal;
+  window.closeModal = closeModal;
+  window.handleOverlayClick = handleOverlayClick;
+  window.logDayFromModal = logDayFromModal;
+
+  init();
+</script>
+</body>
+</html>
