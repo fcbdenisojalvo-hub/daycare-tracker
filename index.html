@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Daycare Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daycare">
+<meta name="theme-color" content="#3D2B1F">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root {
     --cream: #FDF8F2; --warm: #F5EDE0; --peach: #F2A97A; --peach-dark: #E8894F;
@@ -384,6 +390,13 @@
   window.logDayFromModal = logDayFromModal;
 
   init();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/daycare-tracker/sw.js');
+    });
+  }
 </script>
 </body>
 </html>

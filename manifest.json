@@ -1,0 +1,24 @@
+{
+  "name": "Little Daycare Tracker",
+  "short_name": "Daycare",
+  "description": "Track your child's daycare attendance and monthly costs",
+  "start_url": "/daycare-tracker/",
+  "display": "standalone",
+  "background_color": "#FDF8F2",
+  "theme_color": "#3D2B1F",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
